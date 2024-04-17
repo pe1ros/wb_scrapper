@@ -2,7 +2,7 @@ require('dotenv').config();
 const puppeteer = require('puppeteer');
 
 async function scrollToBottom(page, pageIndex) {
-  console.log(`<======= SCROLL =======> ${pageIndex}`);
+  console.log(`<======= SCROLL PAGE =======> ${pageIndex}`);
   await page.evaluate(async () => {
     await new Promise((resolve, reject) => {
       const scrollHeight = document.documentElement.scrollHeight;
@@ -27,8 +27,9 @@ async function autoSearchAndScroll() {
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
   let nextPageButtonExists = true;
+  let prevIndex = 1;
 
-  console.log('<======= GO TO =======>');
+  console.log(`<======= GO TO =======> ${process.env.URL}`);
   await page.goto(process.env.URL);
   await page.waitForSelector('.search-catalog__input');
   await page.evaluate(() => {
@@ -47,27 +48,22 @@ async function autoSearchAndScroll() {
     const url = await page.url();
     const match = url.match(/page=(\d+)/);
     const index = match ? parseInt(match[1]) : 'UNKNOWN_MAYBE_1';
+
+    if(prevIndex === index) {
+      break;
+    }
+    prevIndex = index;
+
     await scrollToBottom(page, index);
 
-    nextPageButtonExists = await page.evaluate(() => {
-      const nextPageButton = document.querySelector('.pagination-next');
+    await page.evaluate(() => {
+      const nextPageButton = document.querySelector('.pagination__next');
       if (nextPageButton) {
         nextPageButton.click();
         return true;
       }
       return false;
     });
-
-    if (nextPageButtonExists) {
-      await page.waitForSelector('.searching-results__inner');
-      // await page.evaluate(() => {
-      //   return new Promise((resolve) => {
-      //     setTimeout(() => {
-      //       resolve();
-      //     }, 1000);
-      //   });
-      // });
-    }
   }
 
   console.log('<======= CLOSE BROWSER =======>');
